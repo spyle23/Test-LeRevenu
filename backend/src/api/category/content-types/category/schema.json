@@ -1,0 +1,49 @@
+{
+  "kind": "collectionType",
+  "collectionName": "categories",
+  "info": {
+    "singularName": "category",
+    "pluralName": "categories",
+    "displayName": "Category",
+    "description": "Espace thématique de la communauté"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "unique": true,
+      "maxLength": 60
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "name",
+      "required": true
+    },
+    "description": {
+      "type": "text",
+      "maxLength": 280
+    },
+    "icon": {
+      "type": "string",
+      "maxLength": 32
+    },
+    "color": {
+      "type": "string",
+      "regex": "^#[0-9a-fA-F]{6}$"
+    },
+    "position": {
+      "type": "integer",
+      "default": 0
+    },
+    "discussions": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::discussion.discussion",
+      "mappedBy": "category"
+    }
+  }
+}
