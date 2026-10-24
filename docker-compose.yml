@@ -1,0 +1,69 @@
+name: lerevenu-community
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DATABASE_USERNAME:-strapi}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-strapi}
+      POSTGRES_DB: ${DATABASE_NAME:-lerevenu_community}
+    ports:
+      - "${DATABASE_HOST_PORT:-5433}:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      HOST: 0.0.0.0
+      PORT: 1337
+      APP_KEYS: ${APP_KEYS:?run `node scripts/setup-env.mjs` first}
+      API_TOKEN_SALT: ${API_TOKEN_SALT:?run `node scripts/setup-env.mjs` first}
+      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET:?run `node scripts/setup-env.mjs` first}
+      TRANSFER_TOKEN_SALT: ${TRANSFER_TOKEN_SALT:?run `node scripts/setup-env.mjs` first}
+      JWT_SECRET: ${JWT_SECRET:?run `node scripts/setup-env.mjs` first}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?run `node scripts/setup-env.mjs` first}
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${DATABASE_NAME:-lerevenu_community}
+      DATABASE_USERNAME: ${DATABASE_USERNAME:-strapi}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-strapi}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+      DEMO_USERS_PASSWORD: ${DEMO_USERS_PASSWORD:-Revenu2026!}
+      CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "1337:1337"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:1337/_health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    environment:
+      STRAPI_URL: http://backend:1337
+      DEMO_USERS_PASSWORD: ${DEMO_USERS_PASSWORD:-Revenu2026!}
+      # Served over plain HTTP on localhost: the session cookie cannot be "Secure" here.
+      SESSION_COOKIE_SECURE: "false"
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  pg-data:
